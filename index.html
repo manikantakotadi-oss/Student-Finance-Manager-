@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Financial Tool</title>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Phosphor Icons (for icons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .card {
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 1rem;
+        }
+        .tab-button.active {
+            background-color: #4f46e5;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Main Container -->
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 mb-2">AI Financial Tool</h1>
+            <p class="text-xl text-gray-600">Your personal finance copilot.</p>
+            <div id="user-id-display" class="mt-4 text-sm text-gray-500 font-mono"></div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="flex justify-center mb-8 bg-white p-2 rounded-full shadow-lg">
+            <button id="tab-dashboard" class="tab-button flex-1 py-3 px-6 rounded-full font-semibold transition-colors duration-200 active">
+                <i class="ph-chart-bar-fill mr-2"></i> Dashboard
+            </button>
+            <button id="tab-transactions" class="tab-button flex-1 py-3 px-6 rounded-full font-semibold transition-colors duration-200">
+                <i class="ph-receipt-fill mr-2"></i> Transactions
+            </button>
+            <button id="tab-goals" class="tab-button flex-1 py-3 px-6 rounded-full font-semibold transition-colors duration-200">
+                <i class="ph-target-fill mr-2"></i> Goals
+            </button>
+            <button id="tab-budgets" class="tab-button flex-1 py-3 px-6 rounded-full font-semibold transition-colors duration-200">
+                <i class="ph-currency-circle-dollar-fill mr-2"></i> Budgets
+            </button>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="content-container">
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="tab-view grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Predictive Spending -->
+                <div class="lg:col-span-2 card p-6">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center"><i class="ph-lightbulb-fill mr-2 text-yellow-500"></i> Predictive Spending Analysis</h2>
+                    <div id="predictive-spending-container" class="space-y-4">
+                        <p class="text-gray-500 italic">Analyzing your data...</p>
+                    </div>
+                </div>
+
+                <!-- Goal Tracking -->
+                <div class="card p-6">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center"><i class="ph-trophy-fill mr-2 text-emerald-500"></i> Savings Goals</h2>
+                    <div id="goals-container" class="space-y-4">
+                        <p class="text-gray-500 italic">No goals set yet.</p>
+                    </div>
+                </div>
+
+                <!-- Monthly Spending Trend -->
+                <div class="lg:col-span-2 card p-6">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center"><i class="ph-chart-line-fill mr-2 text-blue-500"></i> Monthly Spending Trend</h2>
+                    <canvas id="monthly-spending-chart"></canvas>
+                </div>
+                
+                <!-- Spending by Category -->
+                <div class="card p-6 flex flex-col items-center">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center"><i class="ph-pie-chart-fill mr-2 text-purple-500"></i> Spending by Category</h2>
+                    <canvas id="category-spending-chart" class="w-full"></canvas>
+                </div>
+            </div>
+
+            <!-- Transactions View -->
+            <div id="view-transactions" class="tab-view hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Add Transaction Form -->
+                    <div class="card p-6 h-fit">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center"><i class="ph-plus-circle-fill mr-2 text-indigo-500"></i> Add New Transaction</h2>
+                        <form id="add-transaction-form" class="space-y-4">
+                            <label class="block">
+                                <span class="text-gray-700 font-medium">Description</span>
+                                <input id="transaction-description" type="text" placeholder="e.g., Coffee at Joe's" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 px-4 py-2">
+                            </label>
+                            <label class="block">
+                                <span class="text-gray-700 font-medium">Amount ($)</span>
+                                <input id="transaction-amount" type="number" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 px-4 py-2">
+                            </label>
+                            <label class="block">
+                                <span class="text-gray-700 font-medium">Date</span>
+                                <input id="transaction-date" type="date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 px-4 py-2">
+                            </label>
+                            <div class="flex items-center space-x-2">
+                                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105">
+                                    Add Transaction
+                                </button>
+                                <span id="add-transaction-status" class="text-sm font-semibold text-gray-600"></span>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Transaction History -->
+                    <div class="card p-6">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center"><i class="ph-list-fill mr-2 text-gray-500"></i> Transaction History</h2>
+                        <div id="transactions-history-container" class="space-y-4 max-h-[500px] overflow-y-auto">
+                            <p class="text-gray-500 italic">No transactions added yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Goals View -->
+            <div id="view-goals" class="tab-view hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Add Goal Form -->
+                    <div class="card p-6 h-fit">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center"><i class="ph-plus-circle-fill mr-2 text-emerald-500"></i> Set a New Goal</h2>
+                        <form id="add-goal-form" class="space-y-4">
+                            <label class="block">
+                                <span class="text-gray-700 font-medium">Goal Name</span>
+                                <input id="goal-name" type="text" placeholder="e.g., Vacation to Bali" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-300 focus:ring focus:ring-emerald-200 focus:ring-opacity-50 px-4 py-2">
+                            </label>
+                            <label class="block">
+                                <span class="text-gray-700 font-medium">Target Amount ($)</span>
+                                <input id="goal-target" type="number" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-300 focus:ring focus:ring-emerald-200 focus:ring-opacity-50 px-4 py-2">
+                            </label>
+                            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105">
+                                Add Goal
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Existing Goals -->
+                    <div class="card p-6">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center"><i class="ph-list-fill mr-2 text-gray-500"></i> Your Goals</h2>
+                        <div id="existing-goals-container" class="space-y-4">
+                            <p class="text-gray-500 italic">No goals set yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budgets View -->
+            <div id="view-budgets" class="tab-view hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Add Budget Form -->
+                    <div class="card p-6 h-fit">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center"><i class="ph-plus-circle-fill mr-2 text-amber-500"></i> Set a New Budget</h2>
+                        <form id="add-budget-form" class="space-y-4">
+                            <label class="block">
+                                <span class="text-gray-700 font-medium">Category</span>
+                                <select id="budget-category" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-300 focus:ring focus:ring-amber-200 focus:ring-opacity-50 px-4 py-2">
+                                    <option value="">Select Category</option>
+                                    <option value="Groceries">Groceries</option>
+                                    <option value="Utilities">Utilities</option>
+                                    <option value="Rent">Rent</option>
+                                    <option value="Transportation">Transportation</option>
+                                    <option value="Entertainment">Entertainment</option>
+                                    <option value="Shopping">Shopping</option>
+                                    <option value="Dining">Dining</option>
+                                    <option value="Health">Health</option>
+                                    <option value="Travel">Travel</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="text-gray-700 font-medium">Monthly Limit ($)</span>
+                                <input id="budget-limit" type="number" step="0.01" min="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-300 focus:ring focus:ring-amber-200 focus:ring-opacity-50 px-4 py-2">
+                            </label>
+                            <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105">
+                                Add Budget
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Existing Budgets -->
+                    <div class="card p-6">
+                        <h2 class="text-2xl font-bold mb-4 flex items-center"><i class="ph-list-fill mr-2 text-gray-500"></i> Your Budgets</h2>
+                        <div id="existing-budgets-container" class="space-y-4">
+                            <p class="text-gray-500 italic">No budgets set yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Alerts -->
+    <div id="modal-container" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 id="modal-title" class="text-lg leading-6 font-medium text-gray-900">Alert</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p id="modal-message" class="text-sm text-gray-500"></p>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="modal-close-btn" class="px-4 py-2 bg-indigo-600 text-white text-base font-medium rounded-full w-full shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-transform transform hover:scale-105">
+                        Got it!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Log all Firebase debug messages
+        setLogLevel('Debug');
+
+        // Global variables for Firebase
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let userId = null;
+        let authReady = false;
+
+        // HTML elements
+        const userIdDisplay = document.getElementById('user-id-display');
+        const tabs = document.querySelectorAll('.tab-button');
+        const views = document.querySelectorAll('.tab-view');
+        const dashboardView = document.getElementById('view-dashboard');
+        const transactionsView = document.getElementById('view-transactions');
+        const goalsView = document.getElementById('view-goals');
+        const budgetsView = document.getElementById('view-budgets');
+        const addTransactionForm = document.getElementById('add-transaction-form');
+        const transactionDescriptionInput = document.getElementById('transaction-description');
+        const transactionAmountInput = document.getElementById('transaction-amount');
+        const transactionDateInput = document.getElementById('transaction-date');
+        const transactionStatus = document.getElementById('add-transaction-status');
+        const transactionsHistoryContainer = document.getElementById('transactions-history-container');
+        const addGoalForm = document.getElementById('add-goal-form');
+        const goalNameInput = document.getElementById('goal-name');
+        const goalTargetInput = document.getElementById('goal-target');
+        const existingGoalsContainer = document.getElementById('existing-goals-container');
+        const addBudgetForm = document.getElementById('add-budget-form');
+        const budgetCategorySelect = document.getElementById('budget-category');
+        const budgetLimitInput = document.getElementById('budget-limit');
+        const existingBudgetsContainer = document.getElementById('existing-budgets-container');
+        const modalContainer = document.getElementById('modal-container');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const predictiveSpendingContainer = document.getElementById('predictive-spending-container');
+        const goalsDashboardContainer = document.getElementById('goals-container');
+
+        // Charts
+        let monthlySpendingChart = null;
+        let categorySpendingChart = null;
+
+        // Constants
+        const categories = ['Groceries', 'Utilities', 'Rent', 'Transportation', 'Entertainment', 'Shopping', 'Dining', 'Health', 'Travel', 'Other'];
+        const colors = {
+            'Groceries': '#6366f1', // Indigo
+            'Utilities': '#3b82f6', // Blue
+            'Rent': '#ef4444', // Red
+            'Transportation': '#f59e0b', // Amber
+            'Entertainment': '#ec4899', // Pink
+            'Shopping': '#8b5cf6', // Violet
+            'Dining': '#10b981', // Emerald
+            'Health': '#f43f5e', // Rose
+            'Travel': '#06b6d4', // Cyan
+            'Other': '#6b7280', // Gray
+        };
+
+        // --- Authentication & Initialization ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                userIdDisplay.textContent = `User ID: ${userId}`;
+            } else {
+                try {
+                    await (initialAuthToken ? signInWithCustomToken(auth, initialAuthToken) : signInAnonymously(auth));
+                    userId = auth.currentUser.uid;
+                    userIdDisplay.textContent = `User ID: ${userId}`;
+                } catch (error) {
+                    console.error("Authentication failed:", error);
+                }
+            }
+            authReady = true;
+            setupRealtimeListeners();
+            showTab('dashboard');
+        });
+
+        // --- API & Data Fetching ---
+        const callGeminiApi = async (prompt) => {
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            category: { "type": "STRING", "description": "The expense category" }
+                        },
+                        "propertyOrdering": ["category"]
+                    }
+                }
+            };
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const json = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (json) {
+                    const parsed = JSON.parse(json);
+                    const category = parsed.category;
+                    if (categories.includes(category)) {
+                        return category;
+                    }
+                }
+                return 'Other'; // Fallback if AI fails to categorize
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                return 'Other'; // Fallback on error
+            }
+        };
+
+        // --- Firestore Realtime Listeners ---
+        const setupRealtimeListeners = () => {
+            if (!authReady || !userId) return;
+
+            // Transactions Listener
+            const transactionsRef = collection(db, `artifacts/${appId}/users/${userId}/financial_data/transactions`);
+            onSnapshot(transactionsRef, (snapshot) => {
+                const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateDashboard(transactions);
+                renderTransactionHistory(transactions);
+            });
+
+            // Goals Listener
+            const goalsRef = collection(db, `artifacts/${appId}/users/${userId}/financial_data/goals`);
+            onSnapshot(goalsRef, (snapshot) => {
+                const goals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderGoalsDashboard(goals);
+                renderExistingGoals(goals);
+            });
+
+            // Budgets Listener
+            const budgetsRef = collection(db, `artifacts/${appId}/users/${userId}/financial_data/budgets`);
+            onSnapshot(budgetsRef, (snapshot) => {
+                const budgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderExistingBudgets(budgets);
+            });
+        };
+
+        // --- UI Rendering Functions ---
+
+        const updateDashboard = (transactions, budgets) => {
+            // Group transactions by category and date
+            const groupedByCategory = transactions.reduce((acc, t) => {
+                acc[t.category] = (acc[t.category] || 0) + t.amount;
+                return acc;
+            }, {});
+
+            const groupedByMonth = transactions.reduce((acc, t) => {
+                const date = new Date(t.date);
+                const monthYear = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+                acc[monthYear] = (acc[monthYear] || 0) + t.amount;
+                return acc;
+            }, {});
+
+            renderCategorySpendingChart(groupedByCategory);
+            renderMonthlySpendingChart(groupedByMonth);
+            renderPredictiveSpending(transactions, budgets);
+            checkBudgetAlerts(transactions, budgets);
+        };
+
+        const renderCategorySpendingChart = (data) => {
+            const canvas = document.getElementById('category-spending-chart');
+            const chartData = {
+                labels: Object.keys(data),
+                datasets: [{
+                    data: Object.values(data),
+                    backgroundColor: Object.keys(data).map(c => colors[c] || colors['Other']),
+                    borderColor: '#fff',
+                    hoverOffset: 4
+                }]
+            };
+
+            if (categorySpendingChart) {
+                categorySpendingChart.data = chartData;
+                categorySpendingChart.update();
+            } else {
+                categorySpendingChart = new Chart(canvas, {
+                    type: 'doughnut',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            title: { display: false }
+                        }
+                    }
+                });
+            }
+        };
+
+        const renderMonthlySpendingChart = (data) => {
+            const canvas = document.getElementById('monthly-spending-chart');
+            const labels = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
+            const chartData = {
+                labels: labels,
+                datasets: [{
+                    label: 'Monthly Spending',
+                    data: labels.map(l => data[l]),
+                    fill: true,
+                    backgroundColor: 'rgba(79, 70, 229, 0.2)',
+                    borderColor: '#4f46e5',
+                    tension: 0.3
+                }]
+            };
+
+            if (monthlySpendingChart) {
+                monthlySpendingChart.data = chartData;
+                monthlySpendingChart.update();
+            } else {
+                monthlySpendingChart = new Chart(canvas, {
+                    type: 'line',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+        };
+
+        const renderPredictiveSpending = (transactions) => {
+            predictiveSpendingContainer.innerHTML = ''; // Clear previous data
+            const now = new Date();
+            const monthlySpending = {};
+            const months = {};
+
+            transactions.forEach(t => {
+                const date = new Date(t.date);
+                const monthYear = `${date.getFullYear()}-${date.getMonth()}`;
+                const category = t.category;
+
+                if (!monthlySpending[monthYear]) {
+                    monthlySpending[monthYear] = {};
+                }
+                monthlySpending[monthYear][category] = (monthlySpending[monthYear][category] || 0) + t.amount;
+                months[monthYear] = true;
+            });
+            
+            const numMonths = Object.keys(months).length;
+            if (numMonths === 0) {
+                 predictiveSpendingContainer.innerHTML = `<p class="text-gray-500 italic">Add some transactions to get a predictive analysis.</p>`;
+                 return;
+            }
+
+            const totalSpendingByCategory = {};
+            Object.values(monthlySpending).forEach(monthData => {
+                for (const category in monthData) {
+                    totalSpendingByCategory[category] = (totalSpendingByCategory[category] || 0) + monthData[category];
+                }
+            });
+
+            const avgMonthlySpending = {};
+            for (const category in totalSpendingByCategory) {
+                avgMonthlySpending[category] = totalSpendingByCategory[category] / numMonths;
+            }
+
+            let html = '';
+            for (const category of categories) {
+                const avg = avgMonthlySpending[category] || 0;
+                if (avg > 0) {
+                    html += `
+                        <div class="flex items-center justify-between p-4 rounded-lg bg-gray-50">
+                            <span class="font-semibold text-gray-700">${category}</span>
+                            <span class="text-gray-900 font-bold">$${avg.toFixed(2)}</span>
+                        </div>
+                    `;
+                }
+            }
+            if (html === '') {
+                predictiveSpendingContainer.innerHTML = `<p class="text-gray-500 italic">Add some transactions to get a predictive analysis.</p>`;
+            } else {
+                predictiveSpendingContainer.innerHTML = html;
+            }
+        };
+
+        const renderGoalsDashboard = (goals) => {
+            goalsDashboardContainer.innerHTML = '';
+            if (goals.length === 0) {
+                goalsDashboardContainer.innerHTML = `<p class="text-gray-500 italic">No goals set yet. Set one in the 'Goals' tab!</p>`;
+                return;
+            }
+
+            let html = '';
+            goals.forEach(goal => {
+                const progress = (goal.currentAmount / goal.targetAmount) * 100;
+                const progressColor = progress >= 100 ? 'bg-emerald-500' : 'bg-indigo-500';
+                html += `
+                    <div class="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-semibold text-gray-800">${goal.name}</h3>
+                            <span class="text-sm font-bold text-gray-600">$${goal.currentAmount.toFixed(2)} / $${goal.targetAmount.toFixed(2)}</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="h-2.5 rounded-full ${progressColor} transition-all duration-500" style="width: ${Math.min(progress, 100)}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            goalsDashboardContainer.innerHTML = html;
+        };
+
+        const renderTransactionHistory = (transactions) => {
+            transactionsHistoryContainer.innerHTML = '';
+            if (transactions.length === 0) {
+                transactionsHistoryContainer.innerHTML = `<p class="text-gray-500 italic">No transactions added yet.</p>`;
+                return;
+            }
+
+            const sortedTransactions = transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            let html = '';
+            sortedTransactions.forEach(t => {
+                html += `
+                    <div class="p-4 rounded-lg bg-gray-50 border border-gray-200 flex justify-between items-center">
+                        <div>
+                            <p class="font-medium text-gray-900">${t.description}</p>
+                            <p class="text-sm text-gray-500">${t.category} &bull; ${new Date(t.date).toLocaleDateString()}</p>
+                        </div>
+                        <span class="text-lg font-bold text-red-600">-$${t.amount.toFixed(2)}</span>
+                    </div>
+                `;
+            });
+            transactionsHistoryContainer.innerHTML = html;
+        };
+
+        const renderExistingGoals = (goals) => {
+            existingGoalsContainer.innerHTML = '';
+            if (goals.length === 0) {
+                existingGoalsContainer.innerHTML = `<p class="text-gray-500 italic">No goals set yet.</p>`;
+                return;
+            }
+            let html = '';
+            goals.forEach(goal => {
+                html += `
+                    <div class="p-4 rounded-lg bg-gray-50 border border-gray-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-semibold text-gray-800">${goal.name}</h3>
+                            <span class="text-sm font-bold text-gray-600">$${goal.currentAmount.toFixed(2)} / $${goal.targetAmount.toFixed(2)}</span>
+                        </div>
+                        <button onclick="depositToGoal('${goal.id}')" class="mt-2 w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-full transition-colors duration-200">
+                            Deposit
+                        </button>
+                    </div>
+                `;
+            });
+            existingGoalsContainer.innerHTML = html;
+        };
+
+        const renderExistingBudgets = (budgets) => {
+            existingBudgetsContainer.innerHTML = '';
+            if (budgets.length === 0) {
+                existingBudgetsContainer.innerHTML = `<p class="text-gray-500 italic">No budgets set yet.</p>`;
+                return;
+            }
+            let html = '';
+            budgets.forEach(budget => {
+                html += `
+                    <div class="p-4 rounded-lg bg-gray-50 border border-gray-200 flex justify-between items-center">
+                        <div>
+                            <p class="font-medium text-gray-900">${budget.category}</p>
+                            <p class="text-sm text-gray-500">Monthly Limit</p>
+                        </div>
+                        <span class="text-lg font-bold text-gray-600">$${budget.monthlyLimit.toFixed(2)}</span>
+                    </div>
+                `;
+            });
+            existingBudgetsContainer.innerHTML = html;
+        };
+
+        const showModal = (title, message) => {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalContainer.classList.remove('hidden');
+        };
+
+        // --- Budget Alert Logic ---
+        const checkBudgetAlerts = (transactions) => {
+            if (!authReady || !userId) return;
+
+            const budgetsRef = collection(db, `artifacts/${appId}/users/${userId}/financial_data/budgets`);
+            onSnapshot(budgetsRef, (budgetSnapshot) => {
+                const budgets = budgetSnapshot.docs.map(doc => doc.data());
+                
+                if (budgets.length === 0) return;
+
+                const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+                const monthlySpending = transactions
+                    .filter(t => t.date.slice(0, 7) === currentMonth)
+                    .reduce((acc, t) => {
+                        acc[t.category] = (acc[t.category] || 0) + t.amount;
+                        return acc;
+                    }, {});
+
+                budgets.forEach(budget => {
+                    const spending = monthlySpending[budget.category] || 0;
+                    if (spending >= budget.monthlyLimit) {
+                        showModal("Budget Exceeded!", `You have exceeded your $${budget.monthlyLimit.toFixed(2)} budget for ${budget.category}.`);
+                    } else if (spending >= budget.monthlyLimit * 0.9) {
+                        showModal("Budget Alert!", `You are approaching your budget limit for ${budget.category}. You have spent $${spending.toFixed(2)} out of $${budget.monthlyLimit.toFixed(2)}.`);
+                    }
+                });
+            });
+        };
+
+        // --- Event Handlers ---
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                tabs.forEach(t => t.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                const viewId = e.currentTarget.id.replace('tab-', 'view-');
+                showTab(viewId);
+            });
+        });
+
+        const showTab = (viewId) => {
+            views.forEach(view => view.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+        };
+
+        addTransactionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const description = transactionDescriptionInput.value;
+            const amount = parseFloat(transactionAmountInput.value);
+            const date = transactionDateInput.value;
+
+            if (isNaN(amount) || amount <= 0) {
+                transactionStatus.textContent = 'Please enter a valid amount.';
+                return;
+            }
+
+            transactionStatus.textContent = 'Categorizing...';
+            const category = await callGeminiApi(`Categorize the expense: ${description} for $${amount}`);
+            
+            try {
+                const transactionsRef = collection(db, `artifacts/${appId}/users/${userId}/financial_data/transactions`);
+                await addDoc(transactionsRef, {
+                    description,
+                    amount,
+                    date,
+                    category,
+                    userId
+                });
+                transactionStatus.textContent = 'Transaction added!';
+                addTransactionForm.reset();
+            } catch (error) {
+                console.error("Error adding transaction:", error);
+                transactionStatus.textContent = 'Failed to add transaction.';
+            }
+        });
+
+        addGoalForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = goalNameInput.value;
+            const targetAmount = parseFloat(goalTargetInput.value);
+
+            try {
+                const goalsRef = collection(db, `artifacts/${appId}/users/${userId}/financial_data/goals`);
+                await addDoc(goalsRef, {
+                    name,
+                    targetAmount,
+                    currentAmount: 0,
+                    userId
+                });
+                addGoalForm.reset();
+            } catch (error) {
+                console.error("Error adding goal:", error);
+            }
+        });
+
+        addBudgetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const category = budgetCategorySelect.value;
+            const monthlyLimit = parseFloat(budgetLimitInput.value);
+
+            try {
+                const budgetsRef = collection(db, `artifacts/${appId}/users/${userId}/financial_data/budgets`);
+                await addDoc(budgetsRef, {
+                    category,
+                    monthlyLimit,
+                    userId
+                });
+                addBudgetForm.reset();
+            } catch (error) {
+                console.error("Error adding budget:", error);
+            }
+        });
+
+        // Global functions for button clicks
+        window.depositToGoal = async (goalId) => {
+            const depositAmount = parseFloat(window.prompt("Enter amount to deposit:", "10"));
+            if (isNaN(depositAmount) || depositAmount <= 0) return;
+
+            try {
+                const goalRef = doc(db, `artifacts/${appId}/users/${userId}/financial_data/goals/${goalId}`);
+                const goalDoc = await getDoc(goalRef);
+                if (goalDoc.exists()) {
+                    const currentAmount = goalDoc.data().currentAmount;
+                    await updateDoc(goalRef, {
+                        currentAmount: currentAmount + depositAmount
+                    });
+                }
+            } catch (error) {
+                console.error("Error depositing to goal:", error);
+            }
+        };
+
+        modalCloseBtn.addEventListener('click', () => {
+            modalContainer.classList.add('hidden');
+        });
+        
+    </script>
+</body>
+</html>
